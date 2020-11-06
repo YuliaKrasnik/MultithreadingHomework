@@ -28,9 +28,11 @@ class TimerFragment : Fragment() {
     private var minutes = 0
     private var seconds = 0
 
+    private var isConfigurationChange = false
+
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+            inflater: LayoutInflater, container: ViewGroup?,
+            savedInstanceState: Bundle?
     ): View {
         val fragmentLayout = inflater.inflate(R.layout.fragment_timer, container, false)
 
@@ -39,17 +41,36 @@ class TimerFragment : Fragment() {
             startTimer()
             btnStartTimer.isEnabled = false
         }
-
         tvCountTimer = fragmentLayout.findViewById(R.id.tv_count_timer)
-        tvCountTimer.text = convertIntoFormatTime(minutes, seconds)
+
+        if (savedInstanceState != null) {
+            minutes = savedInstanceState.getInt("minutes")
+            seconds = savedInstanceState.getInt("seconds")
+            setTimeInTextView()
+            startTimer()
+            btnStartTimer.isEnabled = false
+        } else {
+            setTimeInTextView()
+        }
 
         return fragmentLayout
+    }
+
+    private fun setTimeInTextView() {
+        tvCountTimer.text = convertIntoFormatTime(minutes, seconds)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        isConfigurationChange = true
+        outState.putInt("minutes", minutes)
+        outState.putInt("seconds", seconds)
     }
 
     private fun startTimer() {
         timer = Timer({
             increaseTheTime()
-            tvCountTimer.text = convertIntoFormatTime(minutes, seconds)
+            setTimeInTextView()
         }, TIMER_INTERVAL, true)
 
         timer?.start()
@@ -61,7 +82,6 @@ class TimerFragment : Fragment() {
             seconds = 0
             minutes++
         }
-
     }
 
     private fun convertIntoFormatTime(minutes: Int, seconds: Int): String {
@@ -72,24 +92,26 @@ class TimerFragment : Fragment() {
 
     override fun onDestroy() {
         timer?.stopTimer()
-        createNotification()
+        if (!isConfigurationChange) {
+            createNotification()
+        }
         super.onDestroy()
     }
 
     private fun createNotification() {
         val data: Data = Data
-            .Builder()
-            .putString(
-                NotificationWorker.KEY_AMOUNT_OF_TIME,
-                convertIntoFormatTime(minutes, seconds)
-            )
-            .build()
+                .Builder()
+                .putString(
+                        NotificationWorker.KEY_AMOUNT_OF_TIME,
+                        convertIntoFormatTime(minutes, seconds)
+                )
+                .build()
 
         val notificationWorkRequest = OneTimeWorkRequest
-            .Builder(NotificationWorker::class.java)
-            .setInputData(data)
-            .setInitialDelay(DURATION_WORK_MANAGER, TimeUnit.SECONDS)
-            .build()
+                .Builder(NotificationWorker::class.java)
+                .setInputData(data)
+                .setInitialDelay(DURATION_WORK_MANAGER, TimeUnit.SECONDS)
+                .build()
 
         WorkManager.getInstance(requireContext()).enqueue(notificationWorkRequest)
     }
