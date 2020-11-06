@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MultithreadingHomework</string>
+    <string name="tv_label_timer">Значение таймера:</string>
+    <string name="btn_label_start_timer">Запустить таймер</string>
+</resources>
